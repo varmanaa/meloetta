@@ -1,0 +1,18 @@
+[dependencies]
+deadpool-postgres = "0.14.0"
+dotenvy = "0.15.7"
+eyre = "0.6.12"
+futures = { version = "0.3", default-features = false }
+parking_lot = "0.12.3"
+tokio = { default-features = false, features = ["macros", "rt-multi-thread", "signal"], version = "1.39.2" }
+tokio-postgres = { version = "0.7.11" }
+twilight-gateway = "0.16.0-rc.1"
+twilight-http = "0.16.0-rc.1"
+twilight-model = "0.16.0-rc.1"
+twilight-util = { features = ["builder"], version = "0.16.0-rc.1" }
+
+[package]
+edition = "2021"
+name = "meloetta"
+rust-version = "1.80"
+version = "0.1.0"
