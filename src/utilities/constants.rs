@@ -108,12 +108,8 @@ pub static DISCORD_TOKEN: LazyLock<String> = LazyLock::new(|| {
         .unwrap()
 });
 
-pub static INTENTS: LazyLock<Intents> = LazyLock::new(|| {
-    Intents::GUILDS
-        | Intents::GUILD_MEMBERS
-        | Intents::GUILD_MODERATION
-        | Intents::GUILD_VOICE_STATES
-});
+pub static INTENTS: LazyLock<Intents> =
+    LazyLock::new(|| Intents::GUILDS | Intents::GUILD_MEMBERS | Intents::GUILD_VOICE_STATES);
 
 pub static NON_VOICE_CHANNEL_OWNER_SELECT_OPTIONS: LazyLock<HashSet<String>> =
     LazyLock::new(|| HashSet::from_iter(vec!["claim-select-option".to_owned()]));

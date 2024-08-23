@@ -1,4 +1,3 @@
-mod ban_add;
 mod channel_delete;
 mod channel_update;
 mod guild_create;
@@ -19,7 +18,6 @@ use crate::structs::context::Context;
 
 pub async fn handle_event(context: Arc<Context>, event: Event) -> Result<()> {
     match event {
-        Event::BanAdd(payload) => ban_add::run(context, payload).await,
         Event::ChannelDelete(payload) => channel_delete::run(context, *payload).await,
         Event::ChannelUpdate(payload) => channel_update::run(context, *payload),
         Event::GuildCreate(payload) => guild_create::run(context, *payload).await,
