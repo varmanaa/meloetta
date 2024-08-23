@@ -169,8 +169,7 @@ pub static PANEL_MESSAGE_EMBED: LazyLock<Embed> = LazyLock::new(|| {
 });
 
 pub static WANTED_EVENT_TYPES: LazyLock<EventTypeFlags> = LazyLock::new(|| {
-    EventTypeFlags::BAN_ADD
-        | EventTypeFlags::CHANNEL_DELETE
+    EventTypeFlags::CHANNEL_DELETE
         | EventTypeFlags::CHANNEL_UPDATE
         | EventTypeFlags::GUILD_CREATE
         | EventTypeFlags::GUILD_DELETE
