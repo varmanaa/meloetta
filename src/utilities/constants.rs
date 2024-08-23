@@ -177,9 +177,6 @@ pub static WANTED_EVENT_TYPES: LazyLock<EventTypeFlags> = LazyLock::new(|| {
         | EventTypeFlags::MEMBER_REMOVE
         | EventTypeFlags::MESSAGE_DELETE
         | EventTypeFlags::READY
-        | EventTypeFlags::ROLE_CREATE
-        | EventTypeFlags::ROLE_DELETE
-        | EventTypeFlags::ROLE_UPDATE
         | EventTypeFlags::UNAVAILABLE_GUILD
         | EventTypeFlags::VOICE_STATE_UPDATE
 });
