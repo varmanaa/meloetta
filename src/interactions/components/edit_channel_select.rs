@@ -49,7 +49,6 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
             "add-member-select-option" => {
                 add_member_select_option::run(context, interaction).await?
             }
-            "add-role-select-option" => add_role_select_option::run(context, interaction).await?,
             "claim-select-option" => claim_select_option::run(context, interaction).await?,
             "kick-member-select-option" => {
                 kick_member_select_option::run(context, interaction).await?
@@ -77,9 +76,6 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
             }
             "remove-member-select-option" => {
                 remove_member_select_option::run(context, interaction).await?
-            }
-            "remove-role-select-option" => {
-                remove_role_select_option::run(context, interaction).await?
             }
             "transfer-select-option" => transfer_select_option::run(context, interaction).await?,
             "unlock-channel-select-option" => {

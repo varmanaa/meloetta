@@ -116,7 +116,6 @@ async fn handle_message_component(
 
     match message_component_name {
         "add-member-select" => add_member_select::run(context, interaction).await?,
-        "add-role-select" => add_role_select::run(context, interaction).await?,
         "edit-channel-select" => edit_channel_select::run(context, interaction).await?,
         "kick-member-select" => kick_member_select::run(context, interaction).await?,
         "modify-slowmode-select" => modify_slowmode_select::run(context, interaction).await?,
@@ -124,7 +123,6 @@ async fn handle_message_component(
             modify_video_quality_select::run(context, interaction).await?
         }
         "remove-member-select" => remove_member_select::run(context, interaction).await?,
-        "remove-role-select" => remove_role_select::run(context, interaction).await?,
         "transfer-select" => transfer_select::run(context, interaction).await?,
         _ => {
             let interaction_response = create_interaction_response_embed(

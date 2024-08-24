@@ -117,7 +117,6 @@ pub static NON_VOICE_CHANNEL_OWNER_SELECT_OPTIONS: LazyLock<HashSet<String>> =
 pub static PANEL_MESSAGE_COMPONENTS: LazyLock<Vec<Component>> = LazyLock::new(|| {
     let options = [
         ("Add member permissions", "add-member-select-option"),
-        ("Add role permissions", "add-role-select-option"),
         ("Claim voice channel", "claim-select-option"),
         ("Kick member", "kick-member-select-option"),
         ("Lock channel", "lock-channel-select-option"),
@@ -128,7 +127,6 @@ pub static PANEL_MESSAGE_COMPONENTS: LazyLock<Vec<Component>> = LazyLock::new(||
         ("Modify video quality", "modify-video-quality-select-option"),
         ("Remove channel", "remove-channel-select-option"),
         ("Remove member permissions", "remove-member-select-option"),
-        ("Remove role permissions", "remove-role-select-option"),
         ("Transfer voice channel", "transfer-select-option"),
         ("Unlock channel", "unlock-channel-select-option"),
         ("View information", "view-information-select-option"),

@@ -1,7 +1,5 @@
 pub mod add_member_select;
 pub mod add_member_select_option;
-pub mod add_role_select;
-pub mod add_role_select_option;
 pub mod claim_select_option;
 pub mod edit_channel_select;
 pub mod kick_member_select;
@@ -17,8 +15,6 @@ pub mod modify_video_quality_select_option;
 pub mod remove_channel_select_option;
 pub mod remove_member_select;
 pub mod remove_member_select_option;
-pub mod remove_role_select;
-pub mod remove_role_select_option;
 pub mod transfer_select;
 pub mod transfer_select_option;
 pub mod unlock_channel_select_option;
