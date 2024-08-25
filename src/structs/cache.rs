@@ -7,7 +7,7 @@ use parking_lot::RwLock;
 use twilight_model::{
     channel::permission_overwrite::PermissionOverwrite,
     id::{
-        marker::{ChannelMarker, GuildMarker, MessageMarker, UserMarker},
+        marker::{ChannelMarker, GuildMarker, MessageMarker, RoleMarker, UserMarker},
         Id,
     },
 };
@@ -31,9 +31,11 @@ pub struct CachedCategoryChannel {
 }
 
 pub struct CachedGuild {
+    pub bot_role_id: Id<RoleMarker>,
     pub category_channel_ids: RwLock<HashSet<Id<ChannelMarker>>>,
     pub id: Id<GuildMarker>,
     pub permanence: RwLock<bool>,
+    pub privacy: RwLock<String>,
 }
 
 #[derive(Debug)]
@@ -63,14 +65,22 @@ impl Cache {
         self.unavailable_guilds.write().insert(id);
     }
 
-    pub fn insert_guild(&self, id: Id<GuildMarker>, permanence: bool) {
+    pub fn insert_guild(
+        &self,
+        id: Id<GuildMarker>,
+        bot_role_id: Id<RoleMarker>,
+        permanence: bool,
+        privacy: String,
+    ) {
         self.unavailable_guilds.write().remove(&id);
         self.guilds.write().insert(
             id,
             Arc::new(CachedGuild {
+                bot_role_id,
                 category_channel_ids: RwLock::new(HashSet::new()),
                 id,
                 permanence: RwLock::new(permanence),
+                privacy: RwLock::new(privacy),
             }),
         );
     }
@@ -233,7 +243,11 @@ impl Cache {
         }
     }
 
-    pub fn update_panel_message(&self, channel_id: Id<ChannelMarker>, panel_message_id: Option<Id<MessageMarker>>) {
+    pub fn update_panel_message(
+        &self,
+        channel_id: Id<ChannelMarker>,
+        panel_message_id: Option<Id<MessageMarker>>,
+    ) {
         if let Some(voice_channel) = self.voice_channel(channel_id) {
             *voice_channel.panel_message_id.write() = panel_message_id;
         }
@@ -242,6 +256,12 @@ impl Cache {
     pub fn update_permanence(&self, guild_id: Id<GuildMarker>, permanence: bool) {
         if let Some(guild) = self.guild(guild_id) {
             *guild.permanence.write() = permanence;
+        }
+    }
+
+    pub fn update_privacy(&self, guild_id: Id<GuildMarker>, privacy: String) {
+        if let Some(guild) = self.guild(guild_id) {
+            *guild.privacy.write() = privacy;
         }
     }
 

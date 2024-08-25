@@ -24,9 +24,7 @@ async fn handle_application_command(
 
     match application_command_name {
         "create" => create::run(context, interaction).await?,
-        "info" => info::run(context, interaction).await?,
-        "remove-category" => remove_category::run(context, interaction).await?,
-        "permanence" => permanence::run(context, interaction).await?,
+        "settings" => settings::run(context, interaction).await?,
         _ => {
             let interaction_response = create_interaction_response_embed(
                 format!("I don't have a command with the name \"{application_command_name}\"!"),
@@ -118,6 +116,7 @@ async fn handle_message_component(
         "add-member-select" => add_member_select::run(context, interaction).await?,
         "edit-channel-select" => edit_channel_select::run(context, interaction).await?,
         "kick-member-select" => kick_member_select::run(context, interaction).await?,
+        "modify-privacy-select" => modify_privacy_select::run(context, interaction).await?,
         "modify-slowmode-select" => modify_slowmode_select::run(context, interaction).await?,
         "modify-video-quality-select" => {
             modify_video_quality_select::run(context, interaction).await?

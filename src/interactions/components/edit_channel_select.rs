@@ -53,14 +53,14 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
             "kick-member-select-option" => {
                 kick_member_select_option::run(context, interaction).await?
             }
-            "lock-channel-select-option" => {
-                lock_channel_select_option::run(context, interaction).await?
-            }
             "modify-bitrate-select-option" => {
                 modify_bitrate_select_option::run(context, interaction).await?
             }
             "modify-name-select-option" => {
                 modify_name_select_option::run(context, interaction).await?
+            }
+            "modify-privacy-select-option" => {
+                modify_privacy_select_option::run(context, interaction).await?
             }
             "modify-slowmode-select-option" => {
                 modify_slowmode_select_option::run(context, interaction).await?
@@ -78,9 +78,6 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
                 remove_member_select_option::run(context, interaction).await?
             }
             "transfer-select-option" => transfer_select_option::run(context, interaction).await?,
-            "unlock-channel-select-option" => {
-                unlock_channel_select_option::run(context, interaction).await?
-            }
             "view-information-select-option" => {
                 view_information_select_option::run(context, interaction).await?
             }

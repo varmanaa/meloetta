@@ -1,6 +1,17 @@
 use std::sync::Arc;
 
-use twilight_model::{channel::ChannelType, gateway::payload::incoming::VoiceStateUpdate};
+use twilight_model::{
+    channel::{
+        permission_overwrite::{
+            PermissionOverwrite as ChannelPermissionOverwrite,
+            PermissionOverwriteType as ChannelPermissionOverwriteType,
+        },
+        ChannelType,
+    },
+    gateway::payload::incoming::VoiceStateUpdate,
+    guild::Permissions,
+    id::{marker::GenericMarker, Id},
+};
 
 use crate::{
     structs::context::Context,
@@ -68,7 +79,78 @@ pub async fn run(context: Arc<Context>, payload: VoiceStateUpdate) -> Result<()>
         } else {
             format!("{}'s voice", member.user.name)
         };
-        let permission_overwrites = category_channel.permission_overwrites.read().clone();
+
+        let mut permission_overwrites = category_channel.permission_overwrites.read().clone();
+        let everyone_role_id: Id<GenericMarker> = guild_id.cast();
+        let (mut voice_channel_owner_allow, mut voice_channel_owner_deny): (
+            Permissions,
+            Permissions,
+        ) = (Permissions::empty(), Permissions::empty());
+        let (mut everyone_allow, mut everyone_deny): (Permissions, Permissions) =
+            (Permissions::empty(), Permissions::empty());
+        let privacy_option = guild.privacy.read().clone();
+
+        permission_overwrites.retain(|permission_overwrite| match permission_overwrite.kind {
+            ChannelPermissionOverwriteType::Member
+                if user_id.get().eq(&permission_overwrite.id.get()) =>
+            {
+                voice_channel_owner_allow = permission_overwrite.allow;
+                voice_channel_owner_deny = permission_overwrite.deny;
+
+                false
+            }
+            ChannelPermissionOverwriteType::Role
+                if everyone_role_id.eq(&permission_overwrite.id) =>
+            {
+                everyone_allow = permission_overwrite.allow;
+                everyone_deny = permission_overwrite.deny;
+
+                false
+            }
+            ChannelPermissionOverwriteType::Role
+                if guild.bot_role_id.cast().eq(&permission_overwrite.id) =>
+            {
+                false
+            }
+            _ => !permission_overwrite.allow.is_empty() || !permission_overwrite.deny.is_empty(),
+        });
+
+        if privacy_option.eq("invisible") {
+            everyone_deny.insert(Permissions::VIEW_CHANNEL);
+            voice_channel_owner_allow.insert(Permissions::VIEW_CHANNEL);
+        } else if privacy_option.eq("locked") {
+            everyone_deny.insert(Permissions::CONNECT);
+            voice_channel_owner_allow.insert(Permissions::CONNECT);
+        }
+
+        permission_overwrites.extend(vec![
+            ChannelPermissionOverwrite {
+                allow: Permissions::CONNECT | Permissions::VIEW_CHANNEL,
+                deny: Permissions::empty(),
+                id: guild.bot_role_id.cast(),
+                kind: ChannelPermissionOverwriteType::Role,
+            },
+            ChannelPermissionOverwrite {
+                allow: everyone_allow,
+                deny: everyone_deny,
+                id: everyone_role_id,
+                kind: ChannelPermissionOverwriteType::Role,
+            },
+            ChannelPermissionOverwrite {
+                allow: voice_channel_owner_allow,
+                deny: voice_channel_owner_deny,
+                id: user_id.cast(),
+                kind: ChannelPermissionOverwriteType::Member,
+            },
+        ]);
+
+        for permission_overwrite in &mut permission_overwrites {
+            if permission_overwrite.id.eq(&guild.bot_role_id.cast()) {
+                permission_overwrite
+                    .allow
+                    .insert(Permissions::CONNECT | Permissions::VIEW_CHANNEL);
+            }
+        }
 
         if let Ok(created_voice_channel_response) = context
             .client

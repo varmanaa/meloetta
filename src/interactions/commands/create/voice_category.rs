@@ -2,12 +2,22 @@ use std::sync::Arc;
 
 use eyre::Result;
 use twilight_model::{
-    application::interaction::application_command::CommandOptionValue, channel::ChannelType,
+    application::interaction::application_command::CommandOptionValue,
+    channel::{
+        permission_overwrite::{
+            PermissionOverwrite as ChannelPermissionOverwrite,
+            PermissionOverwriteType as ChannelPermissionOverwriteType,
+        },
+        ChannelType,
+    },
+    guild::Permissions,
 };
 use twilight_util::builder::embed::EmbedBuilder;
 
 use crate::{
-    structs::{context::Context, interaction::ApplicationCommandInteraction},
+    structs::{
+        context::Context, interaction::ApplicationCommandInteraction,
+    },
     utilities::interaction::{
         create_deferred_interaction_response, create_interaction_response_embed,
     },
@@ -32,12 +42,31 @@ pub async fn run(context: Arc<Context>, interaction: ApplicationCommandInteracti
 
         return Ok(());
     };
+    let everyone_deny = match interaction.guild.privacy.read().clone().as_str() {
+        "invisible" => Permissions::VIEW_CHANNEL,
+        "locked" => Permissions::CONNECT,
+        _ => Permissions::empty(),
+    };
     let description = if interaction.guild.category_channel_ids.read().len() > 3 {
         "I'm only allowing a maximum of three voice channel categories in this server!".to_owned()
     } else if let Ok(created_category_channel_response) = context
         .client
         .create_guild_channel(interaction.guild.id, &name)
         .kind(ChannelType::GuildCategory)
+        .permission_overwrites(&[
+            ChannelPermissionOverwrite {
+                allow: Permissions::empty(),
+                deny: everyone_deny,
+                id: interaction.guild.id.cast(),
+                kind: ChannelPermissionOverwriteType::Role,
+            },
+            ChannelPermissionOverwrite {
+                allow: Permissions::VIEW_CHANNEL,
+                deny: Permissions::empty(),
+                id: interaction.guild.bot_role_id.cast(),
+                kind: ChannelPermissionOverwriteType::Role,
+            },
+        ])
         .await
     {
         let created_category_channel = created_category_channel_response.model().await?;
@@ -47,6 +76,12 @@ pub async fn run(context: Arc<Context>, interaction: ApplicationCommandInteracti
             .create_guild_channel(interaction.guild.id, "Join to create")
             .kind(ChannelType::GuildVoice)
             .parent_id(created_category_channel_id)
+            .permission_overwrites(&[ChannelPermissionOverwrite {
+                allow: Permissions::CONNECT | Permissions::VIEW_CHANNEL,
+                deny: Permissions::empty(),
+                id: interaction.guild.bot_role_id.cast(),
+                kind: ChannelPermissionOverwriteType::Role,
+            }])
             .position(0)
             .await
         {

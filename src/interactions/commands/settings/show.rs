@@ -40,10 +40,16 @@ pub async fn run(context: Arc<Context>, interaction: ApplicationCommandInteracti
     } else {
         "Voice channels **will be deleted** when empty.".to_owned()
     };
+    let privacy_text = match interaction.guild.privacy.read().clone().as_str() {
+        "invisible" => "Voice channels are **invisible** by default.",
+        "locked" => "Voice channels are **locked and visible** by default.",
+        _ => "Voice channels are **not locked and visible** by default.",
+    };
     let embed = EmbedBuilder::new()
         .color(0xF8F8FF)
         .field(EmbedFieldBuilder::new("Categories", categories_text).build())
         .field(EmbedFieldBuilder::new("Permanence", permanence_text).build())
+        .field(EmbedFieldBuilder::new("Privacy", privacy_text).build())
         .build();
 
     context

@@ -2,7 +2,15 @@ use std::sync::Arc;
 
 use eyre::Result;
 use twilight_model::{
-    application::interaction::application_command::CommandOptionValue, channel::ChannelType,
+    application::interaction::application_command::CommandOptionValue,
+    channel::{
+        permission_overwrite::{
+            PermissionOverwrite as ChannelPermissionOverwrite,
+            PermissionOverwriteType as ChannelPermissionOverwriteType,
+        },
+        ChannelType,
+    },
+    guild::Permissions,
 };
 use twilight_util::builder::embed::EmbedBuilder;
 
@@ -40,6 +48,12 @@ pub async fn run(context: Arc<Context>, interaction: ApplicationCommandInteracti
             .create_guild_channel(interaction.guild.id, "Join to create")
             .kind(ChannelType::GuildVoice)
             .parent_id(category_channel.id)
+            .permission_overwrites(&[ChannelPermissionOverwrite {
+                allow: Permissions::CONNECT | Permissions::VIEW_CHANNEL,
+                deny: Permissions::empty(),
+                id: interaction.guild.bot_role_id.cast(),
+                kind: ChannelPermissionOverwriteType::Role,
+            }])
             .position(0)
             .await
         {

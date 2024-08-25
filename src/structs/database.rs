@@ -26,6 +26,7 @@ pub struct DatabaseGuild {
     #[allow(dead_code)]
     pub id: Id<GuildMarker>,
     pub permanence: bool,
+    pub privacy: String,
 }
 
 pub struct DatabaseVoiceChannel {
@@ -44,7 +45,8 @@ impl Database {
             -- guild table
             CREATE TABLE IF NOT EXISTS public.guild (
                 id INT8 PRIMARY KEY,
-                permanence BOOLEAN NOT NULL DEFAULT TRUE
+                permanence BOOLEAN NOT NULL DEFAULT FALSE,
+                privacy TEXT NOT NULL DEFAULT 'unlocked'
             );
 
             -- category_channel table
@@ -433,6 +435,26 @@ impl Database {
         Ok(())
     }
 
+    pub async fn update_privacy(&self, guild_id: Id<GuildMarker>, privacy: String) -> Result<()> {
+        let client = self.pool.get().await?;
+        let statement = "
+            UPDATE
+                guild
+            SET
+                privacy = $2
+            WHERE
+                id = $1;
+        ";
+        let params: &[&(dyn ToSql + Sync)] = &[&(guild_id.get() as i64), &privacy];
+
+        client
+            .execute(statement, params)
+            .await
+            .wrap_err("Unable to run \"update_privacy\" endpoint.")?;
+
+        Ok(())
+    }
+
     pub async fn update_voice_channel_owner(
         &self,
         voice_channel_id: Id<ChannelMarker>,
@@ -507,6 +529,7 @@ impl From<Row> for DatabaseGuild {
         Self {
             id: Id::new(row.get::<_, i64>("id") as u64),
             permanence: row.get::<_, bool>("permanence"),
+            privacy: row.get::<_, String>("privacy"),
         }
     }
 }

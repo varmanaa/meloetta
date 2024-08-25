@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use eyre::Result;
+use eyre::{Ok, Result};
 use twilight_model::{
     channel::{permission_overwrite::PermissionOverwrite, ChannelType},
     gateway::payload::incoming::GuildCreate,
@@ -14,16 +14,27 @@ use crate::structs::context::Context;
 
 pub async fn run(context: Arc<Context>, payload: GuildCreate) -> Result<()> {
     let guild_id = payload.0.id;
-    let permanence = match context.database.guild(guild_id).await? {
-        None => {
-            context.database.insert_guild(guild_id).await?;
+    let Some(bot_role) = payload.0.roles.into_iter().find(|role| {
+        role.tags.as_ref().is_some_and(|tags| {
+            tags.bot_id
+                .is_some_and(|bot_id| bot_id.eq(&context.application_id.cast()))
+        })
+    }) else {
+        context.client.leave_guild(guild_id).await?;
 
-            false
-        }
-        Some(database_guild) => database_guild.permanence,
+        return Ok(());
     };
 
-    context.cache.insert_guild(guild_id, permanence);
+    context.database.insert_guild(guild_id).await?;
+
+    let database_guild = context.database.guild(guild_id).await?.unwrap();
+
+    context.cache.insert_guild(
+        guild_id,
+        bot_role.id,
+        database_guild.permanence,
+        database_guild.privacy,
+    );
 
     let mut category_channel_permission_overwrites_map: HashMap<
         Id<ChannelMarker>,

@@ -62,37 +62,43 @@ pub static COMMANDS: LazyLock<Vec<Command>> = LazyLock::new(|| {
                 .build(),
         )
         .build(),
-        CommandBuilder::new(
-            "info",
-            "View categories and settings",
-            CommandType::ChatInput,
-        )
-        .build(),
-        CommandBuilder::new(
-            "remove-category",
-            "Remove a voice category",
-            CommandType::ChatInput,
-        )
-        .option(
-            ChannelBuilder::new("category", "The voice category to remove")
-                .channel_types(vec![ChannelType::GuildCategory])
-                .required(true)
+        CommandBuilder::new("settings", "Configure settings", CommandType::ChatInput)
+            .option(
+                SubCommandBuilder::new(
+                    "permanence",
+                    "Configure the deletion of voice channels when empty",
+                )
+                .option(
+                    BooleanBuilder::new(
+                        "state",
+                        "Should voice channels remain if all users have left?",
+                    )
+                    .required(true)
+                    .build(),
+                )
                 .build(),
-        )
-        .build(),
-        CommandBuilder::new(
-            "permanence",
-            "Set the permanence (if permanent or temporary) state of voice channels",
-            CommandType::ChatInput,
-        )
-        .option(
-            BooleanBuilder::new(
-                "state",
-                "Should voice channels remain if all users have left?",
             )
-            .required(true),
-        )
-        .build(),
+            .option(
+                SubCommandBuilder::new(
+                    "privacy",
+                    "Configure the initial permissions of voice channels",
+                )
+                .option(
+                    StringBuilder::new(
+                        "state",
+                        "What should the default privacy state be for voice channels?",
+                    )
+                    .choices(vec![
+                        ("Invisible", "invisible"),
+                        ("Locked (and visible)", "locked"),
+                        ("Unlocked (and visible)", "unlocked"),
+                    ])
+                    .build(),
+                )
+                .build(),
+            )
+            .option(SubCommandBuilder::new("show", "View current settings").build())
+            .build(),
     ]
 });
 
@@ -119,16 +125,15 @@ pub static PANEL_MESSAGE_COMPONENTS: LazyLock<Vec<Component>> = LazyLock::new(||
         ("Add member permissions", "add-member-select-option"),
         ("Claim voice channel", "claim-select-option"),
         ("Kick member", "kick-member-select-option"),
-        ("Lock channel", "lock-channel-select-option"),
         ("Modify bitrate", "modify-bitrate-select-option"),
         ("Modify name", "modify-name-select-option"),
+        ("Modify privacy", "modify-privacy-select-option"),
         ("Modify slowmode", "modify-slowmode-select-option"),
         ("Modify user limit", "modify-user-limit-select-option"),
         ("Modify video quality", "modify-video-quality-select-option"),
         ("Remove channel", "remove-channel-select-option"),
         ("Remove member permissions", "remove-member-select-option"),
         ("Transfer voice channel", "transfer-select-option"),
-        ("Unlock channel", "unlock-channel-select-option"),
         ("View information", "view-information-select-option"),
     ]
     .into_iter()

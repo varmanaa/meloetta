@@ -1,8 +1,11 @@
-use std::{iter, sync::Arc};
+use std::sync::Arc;
 
 use eyre::Result;
 use twilight_model::{
-    channel::permission_overwrite::{PermissionOverwrite, PermissionOverwriteType},
+    channel::permission_overwrite::{
+        PermissionOverwrite as ChannelPermissionOverwrite,
+        PermissionOverwriteType as ChannelPermissionOverwriteType,
+    },
     guild::Permissions,
     id::{marker::GenericMarker, Id},
 };
@@ -21,32 +24,42 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
         .create_response(interaction.id, &interaction.token, &interaction_response)
         .await?;
 
+    let privacy_option = interaction.data.values.clone().into_iter().nth(0).unwrap();
     let mut voice_channel_permission_overwrites = interaction
         .voice_channel
         .permission_overwrites
         .read()
         .clone();
-    let is_locked = voice_channel_permission_overwrites
+    let current_privacy_option = voice_channel_permission_overwrites
         .iter()
         .find(|permission_overwrite| {
             permission_overwrite
                 .id
                 .eq(&interaction.voice_channel.guild_id.cast())
-                && permission_overwrite.kind.eq(&PermissionOverwriteType::Role)
+                && permission_overwrite
+                    .kind
+                    .eq(&ChannelPermissionOverwriteType::Role)
         })
-        .is_some_and(|everyone_permission_overwrite| {
-            everyone_permission_overwrite
+        .map_or("unlocked", |everyone_permission_overwrite| {
+            if everyone_permission_overwrite
+                .deny
+                .contains(Permissions::VIEW_CHANNEL)
+            {
+                "invisible"
+            } else if everyone_permission_overwrite
                 .deny
                 .contains(Permissions::CONNECT)
+            {
+                "locked"
+            } else {
+                "unlocked"
+            }
         });
-    let description = if !is_locked {
-        "This voice channel is already unlocked!"
+    let description = if current_privacy_option.eq(&privacy_option) {
+        "No change has been applied."
     } else {
-        let bot_id: Id<GenericMarker> = context.application_id.cast();
         let voice_channel_owner_id = interaction.voice_channel.owner_id.read().clone();
         let everyone_role_id: Id<GenericMarker> = interaction.voice_channel.guild_id.cast();
-        let (mut bot_allow, mut bot_deny): (Permissions, Permissions) =
-            (Permissions::empty(), Permissions::empty());
         let (mut voice_channel_owner_allow, mut voice_channel_owner_deny): (
             Permissions,
             Permissions,
@@ -56,13 +69,7 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
 
         voice_channel_permission_overwrites.retain(
             |permission_overwrite| match permission_overwrite.kind {
-                PermissionOverwriteType::Member if bot_id.eq(&permission_overwrite.id) => {
-                    bot_allow = permission_overwrite.allow;
-                    bot_deny = permission_overwrite.deny;
-
-                    false
-                }
-                PermissionOverwriteType::Member
+                ChannelPermissionOverwriteType::Member
                     if voice_channel_owner_id.is_some_and(|owner_id| {
                         owner_id.get().eq(&permission_overwrite.id.get())
                     }) =>
@@ -72,7 +79,9 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
 
                     false
                 }
-                PermissionOverwriteType::Role if everyone_role_id.eq(&permission_overwrite.id) => {
+                ChannelPermissionOverwriteType::Role
+                    if everyone_role_id.eq(&permission_overwrite.id) =>
+                {
                     everyone_allow = permission_overwrite.allow;
                     everyone_deny = permission_overwrite.deny;
 
@@ -84,44 +93,52 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
             },
         );
 
-        bot_allow.remove(Permissions::CONNECT);
-        voice_channel_owner_allow.remove(Permissions::CONNECT);
-        everyone_deny.remove(Permissions::CONNECT);
-
-        if !bot_allow.is_empty() || !bot_deny.is_empty() {
-            voice_channel_permission_overwrites.extend(iter::once(PermissionOverwrite {
-                allow: bot_allow,
-                deny: bot_deny,
-                id: bot_id,
-                kind: PermissionOverwriteType::Member,
-            }));
+        if privacy_option.eq("invisible") {
+            everyone_deny.remove(Permissions::CONNECT);
+            everyone_deny.insert(Permissions::VIEW_CHANNEL);
+            voice_channel_owner_allow.insert(Permissions::VIEW_CHANNEL);
+        } else if privacy_option.eq("locked") {
+            everyone_deny.remove(Permissions::VIEW_CHANNEL);
+            everyone_deny.insert(Permissions::CONNECT);
+            voice_channel_owner_allow.insert(Permissions::CONNECT);
+        } else {
+            everyone_deny.remove(Permissions::CONNECT | Permissions::VIEW_CHANNEL);
+            voice_channel_owner_allow.remove(Permissions::CONNECT | Permissions::VIEW_CHANNEL);
         }
-        if let Some(owner_id) = voice_channel_owner_id {
-            if !voice_channel_owner_allow.is_empty() || !voice_channel_owner_deny.is_empty() {
-                voice_channel_permission_overwrites.extend(iter::once(PermissionOverwrite {
+
+        voice_channel_permission_overwrites.extend(vec![ChannelPermissionOverwrite {
+            allow: everyone_allow,
+            deny: everyone_deny,
+            id: everyone_role_id,
+            kind: ChannelPermissionOverwriteType::Role,
+        }]);
+
+        if privacy_option.ne("unlocked") {
+            if let Some(owner_id) = voice_channel_owner_id {
+                voice_channel_permission_overwrites.extend(vec![ChannelPermissionOverwrite {
                     allow: voice_channel_owner_allow,
                     deny: voice_channel_owner_deny,
                     id: owner_id.cast(),
-                    kind: PermissionOverwriteType::Member,
-                }));
+                    kind: ChannelPermissionOverwriteType::Member,
+                }]);
             }
         }
-        if !everyone_allow.is_empty() || !everyone_deny.is_empty() {
-            voice_channel_permission_overwrites.extend(iter::once(PermissionOverwrite {
-                allow: everyone_allow,
-                deny: everyone_deny,
-                id: everyone_role_id,
-                kind: PermissionOverwriteType::Role,
-            }));
-        }
 
-        context
+        if context
             .client
             .update_channel(interaction.voice_channel.id)
             .permission_overwrites(&voice_channel_permission_overwrites)
-            .await?;
-
-        "I've unlocked the voice channel!"
+            .await
+            .is_err()
+        {
+            "I don't have permissions to update this voice channel!"
+        } else if privacy_option.eq("invisible") {
+            "This voice channel is now invisible."
+        } else if privacy_option.eq("locked") {
+            "This voice channel is now locked and visible."
+        } else {
+            "This voice channel is now unlocked and visible."
+        }
     };
     let embed = EmbedBuilder::new()
         .color(0xF8F8FF)

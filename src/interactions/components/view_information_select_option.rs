@@ -2,12 +2,9 @@ use std::sync::Arc;
 
 use eyre::Result;
 use twilight_model::{
-    channel::permission_overwrite::PermissionOverwriteType,
+    channel::permission_overwrite::PermissionOverwriteType as ChannelPermissionOverwriteType,
     guild::Permissions,
-    id::{
-        marker::{RoleMarker, UserMarker},
-        Id,
-    },
+    id::{marker::GenericMarker, Id},
 };
 use twilight_util::builder::embed::{EmbedBuilder, EmbedFieldBuilder};
 
@@ -24,78 +21,64 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
         .create_response(interaction.id, &interaction.token, &interaction_response)
         .await?;
 
-    let mut added_member_ids: Vec<Id<UserMarker>> = Vec::new();
-    let mut added_role_ids: Vec<Id<RoleMarker>> = Vec::new();
-    let mut is_locked: bool = false;
-
-    for permission_overwrite in interaction
+    let mut allowed_member_ids = interaction
         .voice_channel
         .permission_overwrites
         .read()
         .clone()
-    {
-        match permission_overwrite.kind {
-            PermissionOverwriteType::Member => {
-                added_member_ids.push(permission_overwrite.id.cast());
-            }
-            PermissionOverwriteType::Role => {
-                if permission_overwrite
-                    .id
-                    .eq(&interaction.voice_channel.guild_id.cast())
-                {
-                    is_locked = permission_overwrite.deny.contains(Permissions::CONNECT);
-                } else {
-                    added_role_ids.push(permission_overwrite.id.cast());
-                }
-            }
-            _ => continue,
-        };
-    }
-
-    let members_text = if added_member_ids.is_empty() {
+        .into_iter()
+        .filter_map(|permission_overwrite| {
+            permission_overwrite
+                .kind
+                .eq(&ChannelPermissionOverwriteType::Member)
+                .then(|| permission_overwrite.id)
+        })
+        .collect::<Vec<Id<GenericMarker>>>();
+    let members_text = if allowed_member_ids.is_empty() {
         "No members have been added to this voice channel.".to_owned()
     } else {
-        let mut text = added_member_ids
+        let mut text = allowed_member_ids
             .iter()
             .map(|id| format!("- <@{id}>"))
             .collect::<Vec<String>>()
             .join("\n");
 
-        if added_member_ids.len() > 5 {
-            let remaining_members: Vec<Id<UserMarker>> = added_member_ids.split_off(5);
+        if allowed_member_ids.len() > 5 {
+            let remaining_members = allowed_member_ids.split_off(5);
 
             text.push_str(&format!("\n +{} more", remaining_members.len()));
         }
 
         text
     };
-    let roles_text = if added_role_ids.is_empty() {
-        "No roles have been added to this voice channel.".to_owned()
+    let everyone_deny = interaction
+        .voice_channel
+        .permission_overwrites
+        .read()
+        .clone()
+        .into_iter()
+        .find(|permission_overwrite| {
+            permission_overwrite
+                .id
+                .eq(&interaction.voice_channel.guild_id.cast())
+                && permission_overwrite
+                    .kind
+                    .eq(&ChannelPermissionOverwriteType::Role)
+        })
+        .map_or(Permissions::empty(), |permission_overwrite| {
+            permission_overwrite.deny
+        });
+    let privacy_text = if everyone_deny.contains(Permissions::VIEW_CHANNEL) {
+        "This voice channel is invisible."
+    } else if everyone_deny.contains(Permissions::CONNECT) {
+        "This voice channel is locked and visible."
     } else {
-        let mut text = added_role_ids
-            .iter()
-            .map(|id| format!("- <@&{id}>"))
-            .collect::<Vec<String>>()
-            .join("\n");
-
-        if added_role_ids.len() > 5 {
-            let remaining_roles: Vec<Id<RoleMarker>> = added_role_ids.split_off(5);
-
-            text.push_str(&format!("\n +{} more", remaining_roles.len()));
-        }
-
-        text
-    };
-    let locked_text = if is_locked {
-        "This voice channel is currently locked.".to_owned()
-    } else {
-        "This voice channel is currently unlocked.".to_owned()
+        "This voice channel is unlocked and visible."
     };
     let embed = EmbedBuilder::new()
         .color(0xF8F8FF)
-        .field(EmbedFieldBuilder::new("Added member(s)", members_text).build())
-        .field(EmbedFieldBuilder::new("Added role(s)", roles_text).build())
-        .field(EmbedFieldBuilder::new("Locked state", locked_text).build())
+        .field(EmbedFieldBuilder::new("Allowed member(s)", members_text).build())
+        .field(EmbedFieldBuilder::new("Privacy", privacy_text).build())
         .build();
 
     context
