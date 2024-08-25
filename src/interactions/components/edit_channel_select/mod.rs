@@ -1,9 +1,23 @@
+mod allow_member_select_option;
+mod claim_select_option;
+mod deny_member_select_option;
+mod kick_member_select_option;
+mod modify_bitrate_select_option;
+mod modify_name_select_option;
+mod modify_privacy_select_option;
+mod modify_slowmode_select_option;
+mod modify_user_limit_select_option;
+mod modify_video_quality_select_option;
+mod remove_channel_select_option;
+mod remove_member_select_option;
+mod transfer_select_option;
+mod view_information_select_option;
+
 use std::{future::IntoFuture, sync::Arc};
 
 use eyre::Result;
 
 use crate::{
-    interactions::components::*,
     structs::{context::Context, interaction::MessageComponentInteraction},
     utilities::{
         constants::{NON_VOICE_CHANNEL_OWNER_SELECT_OPTIONS, PANEL_MESSAGE_COMPONENTS},
@@ -46,10 +60,13 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
             .await?;
     } else {
         match select_option.as_str() {
-            "add-member-select-option" => {
-                add_member_select_option::run(context, interaction).await?
+            "allow-member-select-option" => {
+                allow_member_select_option::run(context, interaction).await?
             }
             "claim-select-option" => claim_select_option::run(context, interaction).await?,
+            "deny-member-select-option" => {
+                deny_member_select_option::run(context, interaction).await?
+            }
             "kick-member-select-option" => {
                 kick_member_select_option::run(context, interaction).await?
             }

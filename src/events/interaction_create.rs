@@ -113,7 +113,8 @@ async fn handle_message_component(
     let message_component_name = interaction.data.custom_id.as_str();
 
     match message_component_name {
-        "add-member-select" => add_member_select::run(context, interaction).await?,
+        "allow-member-select" => allow_member_select::run(context, interaction).await?,
+        "deny-member-select" => deny_member_select::run(context, interaction).await?,
         "edit-channel-select" => edit_channel_select::run(context, interaction).await?,
         "kick-member-select" => kick_member_select::run(context, interaction).await?,
         "modify-privacy-select" => modify_privacy_select::run(context, interaction).await?,

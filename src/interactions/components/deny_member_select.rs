@@ -1,6 +1,7 @@
-use std::{collections::HashSet, iter, sync::Arc};
+use std::{collections::HashSet, sync::Arc};
 
 use eyre::Result;
+
 use twilight_model::{
     channel::permission_overwrite::PermissionOverwriteType as ChannelPermissionOverwriteType,
     guild::Permissions,
@@ -8,7 +9,7 @@ use twilight_model::{
         PermissionOverwrite as HttpPermissionOverwrite,
         PermissionOverwriteType as HttpPermissionOverwriteType,
     },
-    id::{marker::GenericMarker, Id},
+    id::{marker::UserMarker, Id},
 };
 use twilight_util::builder::embed::EmbedBuilder;
 
@@ -25,58 +26,64 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
         .create_response(interaction.id, &interaction.token, &interaction_response)
         .await?;
 
-    let user_id: Id<GenericMarker> = interaction.data.values.iter().nth(0).unwrap().parse()?;
-    let mut permanent_user_ids: HashSet<Id<GenericMarker>> =
-        HashSet::from_iter(iter::once(context.application_id.cast()));
-
-    if let Some(owner_id) = interaction.voice_channel.owner_id.read().clone() {
-        permanent_user_ids.insert(owner_id.cast());
-    };
-
-    let description = if permanent_user_ids.contains(&user_id) {
-        format!("<@{user_id}> can't be added to this voice channel!")
+    let user_id = interaction
+        .data
+        .resolved
+        .unwrap()
+        .users
+        .values()
+        .nth(0)
+        .unwrap()
+        .id;
+    let protected_user_ids: HashSet<Id<UserMarker>> = HashSet::from_iter(vec![
+        interaction.voice_channel.owner_id.read().clone().unwrap(),
+        context.application_id.cast(),
+    ]);
+    let description = if protected_user_ids.contains(&user_id) {
+        "This user may not be denied!".to_owned()
     } else {
-        let (mut member_allow, member_deny) = interaction
+        let (member_allow, mut member_deny) = interaction
             .voice_channel
             .permission_overwrites
             .read()
-            .iter()
+            .clone()
+            .into_iter()
             .find(|permission_overwrite| {
-                permission_overwrite.id.eq(&user_id)
+                permission_overwrite.id.eq(&user_id.cast())
                     && permission_overwrite
                         .kind
                         .eq(&ChannelPermissionOverwriteType::Member)
             })
             .map_or(
                 (Permissions::empty(), Permissions::empty()),
-                |permission_overwrite| (permission_overwrite.allow, permission_overwrite.deny),
+                |member_permission_overwrite| {
+                    (
+                        member_permission_overwrite.allow,
+                        member_permission_overwrite.deny,
+                    )
+                },
             );
-        let description_text = if member_allow.eq(&Permissions::empty()) {
-            member_allow.insert(Permissions::CONNECT | Permissions::VIEW_CHANNEL);
 
-            format!("I've added <@{user_id}> to this voice channel!")
-        } else if !member_allow.contains(Permissions::CONNECT | Permissions::VIEW_CHANNEL) {
-            member_allow.insert(Permissions::CONNECT | Permissions::VIEW_CHANNEL);
+        member_deny.insert(Permissions::CONNECT | Permissions::VIEW_CHANNEL);
 
-            format!("I've updated permissions for <@{user_id}> in this voice channel!")
-        } else {
-            format!("<@{user_id}> already has permissions in this voice channel!")
-        };
-        
-        context
+        if context
             .client
             .update_channel_permission(
                 interaction.voice_channel.id,
                 &HttpPermissionOverwrite {
                     allow: Some(member_allow),
                     deny: Some(member_deny),
-                    id: user_id,
+                    id: user_id.cast(),
                     kind: HttpPermissionOverwriteType::Member,
                 },
             )
-            .await?;
-
-        description_text
+            .await
+            .is_err()
+        {
+            "I don't have permissions to deny users to this voice channel!".to_owned()
+        } else {
+            format!("I've denied permissions for <@{user_id}>!")
+        }
     };
     let embed = EmbedBuilder::new()
         .color(0xF8F8FF)

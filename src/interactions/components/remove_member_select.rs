@@ -1,14 +1,7 @@
-use std::{collections::HashSet, iter, sync::Arc};
+use std::{collections::HashSet, sync::Arc};
 
 use eyre::Result;
-use twilight_model::{
-    channel::permission_overwrite::PermissionOverwriteType as ChannelPermissionOverwriteType,
-    guild::Permissions,
-    http::permission_overwrite::{
-        PermissionOverwrite, PermissionOverwriteType as HttpPermissionOverwriteType,
-    },
-    id::{marker::GenericMarker, Id},
-};
+use twilight_model::{channel::permission_overwrite::PermissionOverwriteType as ChannelPermissionOverwriteType, id::{marker::UserMarker, Id}};
 use twilight_util::builder::embed::EmbedBuilder;
 
 use crate::{
@@ -24,67 +17,48 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
         .create_response(interaction.id, &interaction.token, &interaction_response)
         .await?;
 
-    let user_id: Id<GenericMarker> = interaction.data.values.iter().nth(0).unwrap().parse()?;
-    let mut permanent_user_ids: HashSet<Id<GenericMarker>> =
-        HashSet::from_iter(iter::once(context.application_id.cast()));
-
-    if let Some(owner_id) = interaction.voice_channel.owner_id.read().clone() {
-        permanent_user_ids.insert(owner_id.cast());
-    };
-
-    let description = if permanent_user_ids.contains(&user_id) {
-        format!("<@{user_id}> can't be removed from this voice channel!")
+    let user_id = interaction
+        .data
+        .resolved
+        .unwrap()
+        .users
+        .values()
+        .nth(0)
+        .unwrap()
+        .id;
+    let protected_user_ids: HashSet<Id<UserMarker>> = HashSet::from_iter(vec![
+        interaction.voice_channel.owner_id.read().clone().unwrap(),
+        context.application_id.cast(),
+    ]);
+    let description = if protected_user_ids.contains(&user_id) {
+        "This user may not be removed!".to_owned()
+    } else if interaction
+        .voice_channel
+        .permission_overwrites
+        .read()
+        .clone()
+        .iter()
+        .find(|permission_overwrite| {
+            permission_overwrite.id.eq(&user_id.cast())
+                && permission_overwrite
+                    .kind
+                    .eq(&ChannelPermissionOverwriteType::Member)
+        })
+        .is_none()
+    {
+        "This user does not have permissions!".to_owned()
     } else {
-        let (mut member_allow, member_deny, member_permission_overwrite_exists) = interaction
-            .voice_channel
-            .permission_overwrites
-            .read()
-            .iter()
-            .find(|permission_overwrite| {
-                permission_overwrite.id.eq(&user_id)
-                    && permission_overwrite
-                        .kind
-                        .eq(&ChannelPermissionOverwriteType::Member)
-            })
-            .map_or(
-                (Permissions::empty(), Permissions::empty(), false),
-                |permission_overwrite| {
-                    (permission_overwrite.allow, permission_overwrite.deny, true)
-                },
-            );
+        context
+            .client
+            .delete_channel_permission(interaction.voice_channel.id)
+            .member(user_id)
+            .await?;
 
-        if !member_permission_overwrite_exists {
-            format!("<@{user_id}> doesn't have permissions in this voice channel!")
-        } else {
-            member_allow.remove(Permissions::CONNECT | Permissions::VIEW_CHANNEL);
-
-            if member_allow.is_empty() && member_deny.is_empty() {
-                context
-                    .client
-                    .delete_channel_permission(interaction.voice_channel.id)
-                    .member(user_id.cast())
-                    .await?;
-            } else {
-                context
-                    .client
-                    .update_channel_permission(
-                        interaction.voice_channel.id,
-                        &PermissionOverwrite {
-                            allow: Some(member_allow),
-                            deny: Some(member_deny),
-                            id: user_id,
-                            kind: HttpPermissionOverwriteType::Member,
-                        },
-                    )
-                    .await?;
-            }
-
-            format!("I've removed permissions for <@{user_id}> in this voice channel!")
-        }
+        format!("I've removed permissions for <@{user_id}>!")
     };
     let embed = EmbedBuilder::new()
         .color(0xF8F8FF)
-        .description(description)
+        .description(description.to_owned())
         .build();
 
     context

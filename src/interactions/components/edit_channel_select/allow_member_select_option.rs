@@ -15,14 +15,15 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
     let components = vec![Component::ActionRow(ActionRow {
         components: vec![Component::SelectMenu(SelectMenu {
             channel_types: None,
-            custom_id: "remove-member-select".to_owned(),
+            custom_id: "allow-member-select".to_owned(),
             default_values: None,
             disabled: false,
             kind: SelectMenuType::User,
             max_values: Some(1),
             min_values: Some(1),
             options: None,
-            placeholder: Some("Select a member to remove permissions for...".to_owned()),
+            placeholder: Some("Select a member to allow permissions for...".to_owned()),
+            
         })],
     })];
     let interaction_response = create_interaction_response_select(components, true);
