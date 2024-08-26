@@ -1,8 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
-use eyre::{Ok, Result};
+use eyre::Result;
 use twilight_model::{
-    channel::{permission_overwrite::PermissionOverwrite, ChannelType},
+    channel::{
+        permission_overwrite::PermissionOverwrite as ChannelPermissionOverwrite, ChannelType,
+    },
     gateway::payload::incoming::GuildCreate,
     id::{
         marker::{ChannelMarker, UserMarker},
@@ -38,11 +40,11 @@ pub async fn run(context: Arc<Context>, payload: GuildCreate) -> Result<()> {
 
     let mut category_channel_permission_overwrites_map: HashMap<
         Id<ChannelMarker>,
-        Vec<PermissionOverwrite>,
+        Vec<ChannelPermissionOverwrite>,
     > = HashMap::new();
     let mut voice_channel_permission_overwrites_map: HashMap<
         Id<ChannelMarker>,
-        Vec<PermissionOverwrite>,
+        Vec<ChannelPermissionOverwrite>,
     > = HashMap::new();
     let mut voice_channel_and_parent_ids: Vec<(Id<ChannelMarker>, Id<ChannelMarker>)> = Vec::new();
     let category_and_voice_channel_ids = payload

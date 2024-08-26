@@ -15,9 +15,7 @@ use twilight_model::{
 use twilight_util::builder::embed::EmbedBuilder;
 
 use crate::{
-    structs::{
-        context::Context, interaction::ApplicationCommandInteraction,
-    },
+    structs::{context::Context, interaction::ApplicationCommandInteraction},
     utilities::interaction::{
         create_deferred_interaction_response, create_interaction_response_embed,
     },
@@ -42,10 +40,10 @@ pub async fn run(context: Arc<Context>, interaction: ApplicationCommandInteracti
 
         return Ok(());
     };
-    let everyone_deny = match interaction.guild.privacy.read().clone().as_str() {
-        "invisible" => Permissions::VIEW_CHANNEL,
-        "locked" => Permissions::CONNECT,
-        _ => Permissions::empty(),
+    let everyone_deny = if interaction.guild.privacy.read().eq("invisible") {
+        Permissions::VIEW_CHANNEL
+    } else {
+        Permissions::empty()
     };
     let description = if interaction.guild.category_channel_ids.read().len() > 3 {
         "I'm only allowing a maximum of three voice channel categories in this server!".to_owned()

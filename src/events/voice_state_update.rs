@@ -144,14 +144,6 @@ pub async fn run(context: Arc<Context>, payload: VoiceStateUpdate) -> Result<()>
             },
         ]);
 
-        for permission_overwrite in &mut permission_overwrites {
-            if permission_overwrite.id.eq(&guild.bot_role_id.cast()) {
-                permission_overwrite
-                    .allow
-                    .insert(Permissions::CONNECT | Permissions::VIEW_CHANNEL);
-            }
-        }
-
         if let Ok(created_voice_channel_response) = context
             .client
             .create_guild_channel(guild_id, &channel_name)

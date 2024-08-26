@@ -23,7 +23,6 @@ pub async fn run(context: Arc<Context>, interaction: MessageComponentInteraction
             min_values: Some(1),
             options: None,
             placeholder: Some("Select a member to remove permissions for...".to_owned()),
-            
         })],
     })];
     let interaction_response = create_interaction_response_select(components, true);

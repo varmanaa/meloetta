@@ -5,7 +5,7 @@ use std::{
 
 use parking_lot::RwLock;
 use twilight_model::{
-    channel::permission_overwrite::PermissionOverwrite,
+    channel::permission_overwrite::PermissionOverwrite as ChannelPermissionOverwrite,
     id::{
         marker::{ChannelMarker, GuildMarker, MessageMarker, RoleMarker, UserMarker},
         Id,
@@ -26,7 +26,7 @@ pub struct CachedCategoryChannel {
     pub guild_id: Id<GuildMarker>,
     pub id: Id<ChannelMarker>,
     pub join_channel_id: RwLock<Option<Id<ChannelMarker>>>,
-    pub permission_overwrites: RwLock<Vec<PermissionOverwrite>>,
+    pub permission_overwrites: RwLock<Vec<ChannelPermissionOverwrite>>,
     pub voice_channel_ids: RwLock<HashSet<Id<ChannelMarker>>>,
 }
 
@@ -46,7 +46,7 @@ pub struct CachedVoiceChannel {
     pub owner_id: RwLock<Option<Id<UserMarker>>>,
     pub panel_message_id: RwLock<Option<Id<MessageMarker>>>,
     pub parent_id: Id<ChannelMarker>,
-    pub permission_overwrites: RwLock<Vec<PermissionOverwrite>>,
+    pub permission_overwrites: RwLock<Vec<ChannelPermissionOverwrite>>,
 }
 
 impl Cache {
@@ -90,7 +90,7 @@ impl Cache {
         guild_id: Id<GuildMarker>,
         id: Id<ChannelMarker>,
         join_channel_id: Option<Id<ChannelMarker>>,
-        permission_overwrites: Vec<PermissionOverwrite>,
+        permission_overwrites: Vec<ChannelPermissionOverwrite>,
         voice_channel_ids: impl IntoIterator<Item = Id<ChannelMarker>>,
     ) {
         if let Some(guild) = self.guild(guild_id) {
@@ -121,7 +121,7 @@ impl Cache {
         owner_id: Option<Id<UserMarker>>,
         panel_message_id: Option<Id<MessageMarker>>,
         parent_id: Id<ChannelMarker>,
-        permission_overwrites: Vec<PermissionOverwrite>,
+        permission_overwrites: Vec<ChannelPermissionOverwrite>,
     ) {
         if let Some(category_channel) = self.category_channel(parent_id) {
             category_channel.voice_channel_ids.write().insert(id);
