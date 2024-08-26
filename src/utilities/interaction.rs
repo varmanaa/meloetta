@@ -106,7 +106,8 @@ pub fn check_interaction(
 
             if interaction.member.as_ref().is_some_and(|member| {
                 member.permissions.is_some_and(|permissions| {
-                    !permissions.contains(Permissions::ADMINISTRATOR | Permissions::MANAGE_GUILD)
+                    !permissions.contains(Permissions::ADMINISTRATOR)
+                        && !permissions.contains(Permissions::MANAGE_GUILD)
                 })
             }) {
                 return Err(eyre!("You need either the **Administrator** or **Manage Server** permissions to use this command!"));
