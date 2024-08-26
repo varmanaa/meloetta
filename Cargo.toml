@@ -15,4 +15,4 @@ twilight-util = { features = ["builder"], version = "0.16.0-rc.1" }
 edition = "2021"
 name = "meloetta"
 rust-version = "1.80"
-version = "0.2.0"
+version = "0.2.1"
