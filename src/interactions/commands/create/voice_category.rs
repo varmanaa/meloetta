@@ -74,12 +74,6 @@ pub async fn run(context: Arc<Context>, interaction: ApplicationCommandInteracti
             .create_guild_channel(interaction.guild.id, "Join to create")
             .kind(ChannelType::GuildVoice)
             .parent_id(created_category_channel_id)
-            .permission_overwrites(&[ChannelPermissionOverwrite {
-                allow: Permissions::CONNECT | Permissions::VIEW_CHANNEL,
-                deny: Permissions::empty(),
-                id: interaction.guild.bot_role_id.cast(),
-                kind: ChannelPermissionOverwriteType::Role,
-            }])
             .position(0)
             .await
         {
